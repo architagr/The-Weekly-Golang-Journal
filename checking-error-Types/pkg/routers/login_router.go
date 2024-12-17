@@ -5,6 +5,7 @@ import (
 	"checking-error-types/pkg/dto"
 	"checking-error-types/pkg/service"
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -34,6 +35,7 @@ func (r LoginRouter) AuthenticateV1(c *gin.Context) {
 	}
 	userInfo, err := r.loginServiceObj.AuthenticateUser(&authReq)
 	if err != nil {
+		log.Println(err)
 		switch err := err.(type) {
 		case apperrors.CredentialError:
 			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
@@ -55,6 +57,7 @@ func (r LoginRouter) AuthenticateV2(c *gin.Context) {
 	}
 	userInfo, err := r.loginServiceObj.AuthenticateUser(&authReq)
 	if err != nil {
+		log.Println(err)
 		var credErr apperrors.CredentialError
 		var sessionErr apperrors.ActiveSessionError
 		if errors.As(err, &apperrors.CredentialError{}) {

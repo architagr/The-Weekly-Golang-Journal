@@ -6,7 +6,6 @@ import (
 	"checking-error-types/pkg/entities"
 	"checking-error-types/pkg/persistence"
 	"fmt"
-	"log"
 )
 
 var LoginServiceObj LoginService
@@ -28,7 +27,6 @@ type LoginService struct {
 func (svc LoginService) AuthenticateUser(authReq *dto.AuthRequest) (*dto.AuthResponse, error) {
 	userInfo, err := svc.loginPersistenceObj.AuthenticateUser(authReq)
 	if err != nil {
-		log.Println(err)
 		return nil, fmt.Errorf("request (%+v), %w", authReq, err)
 	}
 	activeSessions := userInfo.Sessions.Filter(func(val *entities.Session) bool {
