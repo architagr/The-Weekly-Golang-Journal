@@ -16,7 +16,8 @@ func ContextMiddleware(t time.Duration) gin.HandlerFunc {
 			c.Next()
 		}),
 		timeout.WithResponse(func(c *gin.Context) {
-			c.JSON(http.StatusGatewayTimeout, gin.H{"error": "gateway time out"})
+			response := gin.H{"error": "gateway time out"}
+			c.JSON(http.StatusGatewayTimeout, response)
 		}),
 	)
 }

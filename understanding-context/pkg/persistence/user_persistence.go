@@ -20,7 +20,8 @@ func init() {
 }
 
 func (usrPer *UserPersistence) Get(ctx context.Context, id int) (*entities.User, error) {
-	data, err := usrPer.baseDb.Query(ctx, fmt.Sprintf("select * from users where id = %d", id))
+	sqlQuery := fmt.Sprintf("select * from users where id = %d", id)
+	data, err := usrPer.baseDb.Query(ctx, sqlQuery)
 	if err != nil {
 		return nil, err
 	}
