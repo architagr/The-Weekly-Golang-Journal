@@ -1,0 +1,5 @@
+package syncwaitgrouptutorial
+
+func main() {
+
+}
