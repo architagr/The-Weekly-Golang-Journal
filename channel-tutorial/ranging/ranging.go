@@ -14,12 +14,16 @@ type messageProcessor interface {
 
 func Run() {
 	stdPrintProcessor := processor.InitPrintMessage(os.Stdout)
-	sanatizationStream := make(chan string)
+	sanatizationStream := make(chan string, 3)
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
 	go messageProducer(sanatizationStream, wg)
-	wg.Add(1)
-	go dataSanitization(sanatizationStream, stdPrintProcessor, wg)
+
+	numberOfConsumers := 2
+	for i := 1; i <= numberOfConsumers; i++ {
+		wg.Add(1)
+		go dataSanitization(i, sanatizationStream, stdPrintProcessor, wg)
+	}
 	wg.Wait()
 }
 
@@ -27,24 +31,24 @@ func messageProducer(inputStream chan string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	data := []string{
 		"data 1- test  data",
-		"data 2- test  data\t with new line ",
-		"data 3- test  data\t with\tnew line and tab ",
-		"data 4-   test  data\t with\tnew line and tab    ",
-		"data 5-   test  213v data\t with\tnew line and tab    234234   ",
-		"data 6-   test  213v data\t with\tnew line and tab    234234   test",
+		"data 2- test  \tdata",
+		"data 3- test \t \tdata",
+		"data 4- test  \t \t  data",
+		"data 5- test  \t \t  data   ",
+		"   data 6- test  \t \t  data  ",
 	}
 
 	for _, dataStr := range data {
-		fmt.Println("messageProducer:", dataStr)
 		inputStream <- dataStr
+		fmt.Println("messageProducer pushed message:", dataStr)
 	}
 	fmt.Println("messageProducer: closing channel")
 	close(inputStream)
 }
-func dataSanitization(inputStream chan string, processor messageProcessor, wg *sync.WaitGroup) {
+func dataSanitization(consumerId int, inputStream chan string, processor messageProcessor, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for data := range inputStream {
-		fmt.Println("dataSanitization:", data)
+		fmt.Printf("dataSanitization(%d) received message: %s\n", consumerId, data)
 		sanatizedData := stringsanatization.Sanatize(data)
 		processor.Push(sanatizedData)
 	}
