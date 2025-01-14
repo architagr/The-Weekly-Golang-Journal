@@ -11,16 +11,16 @@ func initLogger() {
 
 func Run() {
 	// 1️⃣ Created this channel so that we can signal
-	// multiple goroutines at same time
+	// multiple goroutines at the same time
 	ch := make(chan bool)
 
-	// 2️⃣ initilized the object for sync.Once
+	// 2️⃣ initialized the object for sync.Once
 	once := &sync.Once{}
 
 	// 3️⃣ a wait group to wait till all goroutine have completed
 	wg := &sync.WaitGroup{}
 
-	// 4️⃣ have 10 goroutine that wants to run the initilize function
+	// 4️⃣ has 10 goroutines that wants to run the initialize function
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func(index int, c <-chan bool, waitgroup *sync.WaitGroup) {
@@ -28,7 +28,7 @@ func Run() {
 			<-c
 			fmt.Println("goroutine index ", index, "unblocked")
 
-			// 5️⃣ added a function to object of sync.Once using the Do function,
+			// 5️⃣ added a function to the object of sync.Once using the Do function,
 			// and this is the task for the sync.Once object
 			once.Do(initLogger)
 		}(i, ch, wg)
