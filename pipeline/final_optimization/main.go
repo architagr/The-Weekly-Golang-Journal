@@ -85,48 +85,40 @@ func startProcessing(done <-chan bool, readDataStream <-chan PutTask, failedData
 	return stream
 }
 
-func validateTasks(done <-chan bool, readDataStream <-chan PutTask, failedDataStream chan<- PutTask) <-chan PutTask {
-	return startProcessing(done, readDataStream, failedDataStream, func(task PutTask) bool {
-		if task.taskId == 1 {
-			fmt.Println("Validation failed for task id: ", task.taskId)
-			return false
-		}
-		fmt.Println("Validation done for task id: ", task.taskId)
-		return true
-	})
+func validateTasks(task PutTask) bool {
+	if task.taskId == 1 {
+		fmt.Println("Validation failed for task id: ", task.taskId)
+		return false
+	}
+	fmt.Println("Validation done for task id: ", task.taskId)
+	return true
 }
 
-func createAudit(done <-chan bool, readDataStream <-chan PutTask, failedDataStream chan<- PutTask) <-chan PutTask {
-	return startProcessing(done, readDataStream, failedDataStream, func(task PutTask) bool {
-		if task.taskId == 2 {
-			fmt.Println("Audit failed for task id: ", task.taskId)
-			return false
-		}
-		fmt.Println("Audit done for task id: ", task.taskId)
-		return true
-	})
+func createAudit(task PutTask) bool {
+	if task.taskId == 2 {
+		fmt.Println("Audit failed for task id: ", task.taskId)
+		return false
+	}
+	fmt.Println("Audit done for task id: ", task.taskId)
+	return true
 }
 
-func updateTasks(done <-chan bool, readDataStream <-chan PutTask, failedDataStream chan<- PutTask) <-chan PutTask {
-	return startProcessing(done, readDataStream, failedDataStream, func(task PutTask) bool {
-		if task.taskId == 3 {
-			fmt.Println("Update failed for task id: ", task.taskId)
-			return false
-		}
-		fmt.Println("Update done for task id: ", task.taskId)
-		return true
-	})
+func updateTasks(task PutTask) bool {
+	if task.taskId == 3 {
+		fmt.Println("Update failed for task id: ", task.taskId)
+		return false
+	}
+	fmt.Println("Update done for task id: ", task.taskId)
+	return true
 }
 
-func NotifyForTasks(done <-chan bool, readDataStream <-chan PutTask, failedDataStream chan<- PutTask) <-chan PutTask {
-	return startProcessing(done, readDataStream, failedDataStream, func(task PutTask) bool {
-		if task.taskId == 4 {
-			fmt.Println("Notify failed for task id: ", task.taskId)
-			return false
-		}
-		fmt.Println("Notify done for task id: ", task.taskId)
-		return true
-	})
+func NotifyForTasks(task PutTask) bool {
+	if task.taskId == 4 {
+		fmt.Println("Notify failed for task id: ", task.taskId)
+		return false
+	}
+	fmt.Println("Notify done for task id: ", task.taskId)
+	return true
 }
 
 func main() {
@@ -152,12 +144,11 @@ func main() {
 	done := make(chan bool)
 	defer close(done)
 	failedTaskDataStream := make(chan PutTask)
-
 	stream := convertToStream(done, listOfTasks)
-	validatedTaskStream := validateTasks(done, stream, failedTaskDataStream)
-	auditTaskStream := createAudit(done, validatedTaskStream, failedTaskDataStream)
-	updatedTaskStream := updateTasks(done, auditTaskStream, failedTaskDataStream)
-	notifiedTaskStream := NotifyForTasks(done, updatedTaskStream, failedTaskDataStream)
+	validatedTaskStream := startProcessing(done, stream, failedTaskDataStream, validateTasks)
+	auditTaskStream := startProcessing(done, validatedTaskStream, failedTaskDataStream, createAudit)
+	updatedTaskStream := startProcessing(done, auditTaskStream, failedTaskDataStream, updateTasks)
+	notifiedTaskStream := startProcessing(done, updatedTaskStream, failedTaskDataStream, NotifyForTasks)
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
