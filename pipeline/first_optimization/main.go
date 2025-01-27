@@ -32,8 +32,13 @@ func startProcessing(done <-chan bool, arr []PutTask, worker f) (success, failed
 			pushWg.Add(1)
 			go func(wg *sync.WaitGroup, t PutTask) {
 				defer wg.Done()
+				duration := time.Duration(100) * time.Millisecond
+				if t.taskId%5 == 0 {
+					duration = time.Duration(500) * time.Millisecond
+				}
+
 				// here we are simulating the processing time
-				ticker := time.After(100 * time.Millisecond)
+				ticker := time.After(duration)
 				for {
 					select {
 					case <-done:
@@ -151,6 +156,10 @@ func main() {
 		{taskId: 4, toType: taskTypeTechTask},
 		{taskId: 5, summary: "This is a updated task summary for task 5"},
 		{taskId: 6, summary: "The updated summary for task 6"},
+		{taskId: 7, summary: "The updated summary for task 7"},
+		{taskId: 8, summary: "The updated summary for task 8"},
+		{taskId: 9, summary: "The updated summary for task 9"},
+		{taskId: 10, summary: "The updated summary for task 10"},
 	}
 	done := make(chan bool)
 	defer close(done)
