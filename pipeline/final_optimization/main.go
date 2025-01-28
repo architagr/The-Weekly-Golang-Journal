@@ -38,7 +38,33 @@ func convertToStream(done <-chan bool, arr []PutTask) <-chan PutTask {
 
 type f func(task PutTask) bool
 
-func startProcessing(done <-chan bool, readDataStream <-chan PutTask, failedDataStream chan<- PutTask, worker f) <-chan PutTask {
+func genericStageTaskProcessor(done <-chan bool, wg *sync.WaitGroup, t PutTask, outputStream, failedDataStream chan<- PutTask, stageTaskProcesser f) {
+	defer wg.Done()
+	duration := time.Duration(100) * time.Millisecond
+	if t.taskId%5 == 0 {
+		duration = time.Duration(500) * time.Millisecond
+	}
+	// here we are simulating the processing time
+	ticker := time.After(duration)
+	for {
+		select {
+		case <-done:
+			return
+		case <-ticker:
+			// here we are simulating the worker function,
+			// that is passed as input to the startProcessing
+			// function for each task
+			if stageTaskProcesser(t) {
+				outputStream <- t
+				return
+			}
+			failedDataStream <- t
+			return
+		}
+	}
+}
+
+func pipelineGenerator(done <-chan bool, readDataStream <-chan PutTask, failedDataStream chan<- PutTask, stageTaskProcesser f) <-chan PutTask {
 	stream := make(chan PutTask)
 	go func() {
 		pushWg := &sync.WaitGroup{}
@@ -51,32 +77,7 @@ func startProcessing(done <-chan bool, readDataStream <-chan PutTask, failedData
 					return
 				}
 				pushWg.Add(1)
-				go func(wg *sync.WaitGroup, t PutTask) {
-					defer wg.Done()
-					duration := time.Duration(100) * time.Millisecond
-					if t.taskId%5 == 0 {
-						duration = time.Duration(500) * time.Millisecond
-					}
-					// here we are simulating the processing time
-					ticker := time.After(duration)
-					for {
-						select {
-						case <-done:
-							return
-						case <-ticker:
-							// here we are simulating the worker function,
-							// that is passed as input to the startProcessing
-							// function for each task
-							if worker(t) {
-								stream <- t
-								return
-							}
-							failedDataStream <- t
-							return
-						}
-					}
-
-				}(pushWg, task)
+				go genericStageTaskProcessor(done, pushWg, task, stream, failedDataStream, stageTaskProcesser)
 			case <-done:
 				return
 			}
@@ -144,16 +145,28 @@ func main() {
 	done := make(chan bool)
 	defer close(done)
 	failedTaskDataStream := make(chan PutTask)
+
+	// Convert slice to channel
 	stream := convertToStream(done, listOfTasks)
-	validatedTaskStream := startProcessing(done, stream, failedTaskDataStream, validateTasks)
-	auditTaskStream := startProcessing(done, validatedTaskStream, failedTaskDataStream, createAudit)
-	updatedTaskStream := startProcessing(done, auditTaskStream, failedTaskDataStream, updateTasks)
-	notifiedTaskStream := startProcessing(done, updatedTaskStream, failedTaskDataStream, NotifyForTasks)
+
+	// Stage 1: Validation
+	validatedTaskStream := pipelineGenerator(done, stream, failedTaskDataStream, validateTasks)
+
+	// Stage 2: Audit
+	auditTaskStream := pipelineGenerator(done, validatedTaskStream, failedTaskDataStream, createAudit)
+
+	// Stage 3: Database Update
+	updatedTaskStream := pipelineGenerator(done, auditTaskStream, failedTaskDataStream, updateTasks)
+
+	// Stage 4: Notify
+	notifiedTaskStream := pipelineGenerator(done, updatedTaskStream, failedTaskDataStream, NotifyForTasks)
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		// Consume the final output from the notifiedTaskStream and failedTaskDataStream
+		// to complete the pipeline and return the result to the caller
 		completed := []PutTask{}
 		failedData := []PutTask{}
 		defer func() {
