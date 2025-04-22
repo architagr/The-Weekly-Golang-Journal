@@ -84,17 +84,21 @@ func singnup(usr userDTO, notificationChannel chan<- userDTO) {
 }
 
 func main() {
-	ctx, cancelFn := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancelFn()
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
 	notificationChannel := make(chan userDTO, 1_000)
+
+	// Split the input to two output handlers
 	ch1, ch2 := tee(ctx.Done(), notificationChannel)
 
+	// Start handlers
 	go sendNotification(ctx.Done(), ch1, "marketing")
 	go sendWelcomeEmail(ctx.Done(), ch2)
 
-	singnup(userDTO{id: 1, name: "user 1"}, notificationChannel)
-	singnup(userDTO{id: 2, name: "user 2"}, notificationChannel)
+	// Simulate signups
+	singnup(userDTO{id: 1, name: "Archit", email: "a@example.com"}, notificationChannel)
+	singnup(userDTO{id: 2, name: "Lilly", email: "lilly@example.com"}, notificationChannel)
 
-	time.Sleep(2 * time.Second)
-
+	time.Sleep(2 * time.Second) // Let handlers finish
 }
