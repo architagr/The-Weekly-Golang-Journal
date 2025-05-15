@@ -46,6 +46,9 @@ func (svc UserService) Get(ctx context.Context, id int) (*dto.User, error) {
 	return (&dto.User{}).Init(userInfo), nil
 }
 
+// handle all types of errors that we expect the persistence to return
+// or we can have a builder to build the ServiceError, and also follow
+// The open and closed principle, and single responsibility principal
 func (svc UserService) WrapError(err ILogMessageError) *ServiceError {
 	var objNotFound *persistence.ObjectNotFoundError
 	var result *ServiceError
