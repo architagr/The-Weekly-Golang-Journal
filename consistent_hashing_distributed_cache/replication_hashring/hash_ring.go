@@ -9,6 +9,7 @@ import (
 	"slices"
 	"sort"
 	"sync"
+	"time"
 )
 
 var (
@@ -94,7 +95,7 @@ func (ring *HashRing) AddNode(node ICacheNode) error {
 		}
 	}
 
-	ring.hostMap.Store(nodeID, struct{}{})
+	ring.hostMap.Store(nodeID, time.Now().UTC())
 	ring.sortedKeys = append(ring.sortedKeys, virtualKeys...)
 	slices.Sort(ring.sortedKeys)
 
