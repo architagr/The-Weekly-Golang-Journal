@@ -23,7 +23,7 @@ func NewLeakyBucket(capacity int, leakRatePerSec int) *LeakyBucket {
 		leakRate: time.Second / time.Duration(leakRatePerSec),
 	}
 	go bucket.startLeaking()
-	log.Printf("[init] LeakyBucket initialized with capacity=%d, leakRate=%v", capacity, bucket.leakRate)
+	log.Printf("[init] Leaky bucket created — capacity=%d, leak rate=%v/sec", capacity, bucket.leakRate)
 	return bucket
 }
 
