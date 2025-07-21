@@ -31,8 +31,9 @@ func (s *SlidingWindowLog) allow() (bool, time.Time) {
 	defer s.mu.Unlock()
 
 	now := time.Now().UTC().Unix()
-	cutoff := now - int64(s.window.Seconds())
 	s.logs = append(s.logs, now)
+
+	cutoff := now - int64(s.window.Seconds())
 	// Clean up old logs
 	newLogs := make([]int64, 0, len(s.logs))
 	for _, ts := range s.logs {

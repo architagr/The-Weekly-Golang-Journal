@@ -35,9 +35,9 @@ func (f *FixedWindowCounter) startWindow() {
 	ticker := time.NewTicker(f.window)
 	defer ticker.Stop()
 
-	for range ticker.C {
+	for t := range ticker.C {
 		f.mu.Lock()
-		f.lastReset = time.Now().UTC()
+		f.lastReset = t.UTC()
 		f.counter = 0
 		log.Printf("[rate-limiter] 🔄 Window reset at %v", f.lastReset)
 		f.mu.Unlock()
@@ -53,6 +53,9 @@ func FixedWindowCounterMiddleware(capacity int, window time.Duration) gin.Handle
 		defer limiter.mu.Unlock()
 
 		remaining := limiter.capacity - limiter.counter
+		if remaining < 0 {
+			remaining = 0
+		}
 		c.Header("X-RateLimit-Limit", fmt.Sprintf("%d", limiter.capacity))
 		c.Header("X-RateLimit-Remaining", fmt.Sprintf("%d", remaining))
 

@@ -19,7 +19,7 @@ var (
 )
 
 func refillBucket() {
-	d := time.Second * 10
+	d := time.Second * time.Duration(rate)
 	ticker := time.NewTicker(d)
 	defer ticker.Stop()
 	for range ticker.C {
@@ -42,9 +42,9 @@ func RateLimiterMiddleware(r, cap int) gin.HandlerFunc {
 	for i := 0; i < bucketCapacity; i++ {
 		bucket[i] = time.Now().Unix()
 	}
-	nextRefillTime = time.Now().UTC().Add(time.Second * 10)
+	nextRefillTime = time.Now().UTC().Add(time.Second * (time.Duration(rate)))
 
-	log.Printf("[init] Token bucket initialized with capacity=%d and refillRate=%d tokens/10s\n", bucketCapacity, rate)
+	log.Printf("[init] Token bucket initialized with capacity=%d tokens and refillRate=%d second\n", bucketCapacity, rate)
 
 	go refillBucket()
 
