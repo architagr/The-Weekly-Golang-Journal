@@ -8,15 +8,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// InitRouters sets up all HTTP routes for this node.
 func InitRouters(ginEngine *gin.Engine, ctrl *controller.Store) {
-	// Initialize the router with the gin engine
-	// This function will set up all the routes and handlers
-	// for the key-value store application.
-
+	// GET /:key - retrieve value by key
 	ginEngine.GET("/:key", func(c *gin.Context) {
-		// Handler for GET request to retrieve a value by key
 		key := c.Param("key")
-		// Logic to retrieve the value for the key
 		v, ok := ctrl.Get(key)
 		if !ok {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Key not found"})
@@ -24,17 +20,16 @@ func InitRouters(ginEngine *gin.Engine, ctrl *controller.Store) {
 		}
 		c.JSON(http.StatusOK, v)
 	})
+
+	// PUT /:key - set value for key with vector clock payload
 	ginEngine.PUT("/:key", func(c *gin.Context) {
-		// Handler for PUT request to set a value for a key
 		key := c.Param("key")
 		var value *model.ValueWithClock
 		if err := c.ShouldBindJSON(&value); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 			return
 		}
-		value = ctrl.Set(key, value)
-		c.JSON(http.StatusOK, value)
+		result := ctrl.Set(key, value)
+		c.JSON(http.StatusOK, result)
 	})
-
-	// Add more routes as needed
 }

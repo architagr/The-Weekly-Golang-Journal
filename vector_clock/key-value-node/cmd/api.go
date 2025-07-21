@@ -25,34 +25,17 @@ var (
 
 func init() {
 	flag.Parse()
-	if *nodeId == "" {
-		panic("node-id must be provided")
+	if *nodeId == "" || *address == "" || port == nil || *port <= 0 {
+		log.Fatalf("[FATAL] node-id, address, port are required to start the node.")
 	}
-	if *address == "" {
-		panic("address must be provided")
+	if *keyValueStoreAddress == "" || keyValueStorePort == nil || *keyValueStorePort <= 0 {
+		log.Fatalf("[FATAL] key-value-store-address and key-value-store-port are required.")
 	}
-	if port == nil || *port <= 0 {
-		panic("port must be provided")
-	}
-
-	if *keyValueStoreAddress == "" {
-		panic("key-value-store-address must be provided")
-	}
-
-	if keyValueStorePort == nil || *keyValueStorePort <= 0 {
-		panic("key-value-store-port must be provided")
-	}
-
-	// Set the global NodeId variable
 	config.NodeId = *nodeId
 	registerWithKeyValueStore()
 }
 
 func registerWithKeyValueStore() {
-	// This function would typically register the node with the key-value store
-	// For example, it could send a registration request to the key-value store's API
-	// using the provided address and port.
-	// This is a placeholder function, you would implement the actual registration logic here.
 	node := globalModel.Node{
 		ID:      *nodeId,
 		Address: *address,
@@ -60,30 +43,26 @@ func registerWithKeyValueStore() {
 	}
 	body, err := json.Marshal(node)
 	if err != nil {
-		panic(fmt.Errorf("unable to register node: %w", err))
+		log.Fatalf("[FATAL] Unable to serialize node info for registration: %v", err)
 	}
 	url := fmt.Sprintf("http://%s:%d/node/register", *keyValueStoreAddress, *keyValueStorePort)
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(body))
 	if err != nil {
-		panic(fmt.Errorf("unable to register node: %w", err))
+		log.Fatalf("[FATAL] Unable to construct register request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		panic(fmt.Errorf("unable to register node: %w", err))
+		log.Fatalf("[FATAL] Unable to register node with key-value-store: %v", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusNotFound {
-		panic(fmt.Errorf("unable to register node: %w", err))
-	} else if resp.StatusCode != http.StatusOK {
-		panic(fmt.Errorf("unable to register node: %w", err))
+	if resp.StatusCode != http.StatusOK {
+		log.Fatalf("[FATAL] Node registration failed: HTTP %d", resp.StatusCode)
 	}
+	log.Printf("[INFO] Node %s registered with key-value-store at %s:%d", node.ID, *keyValueStoreAddress, *keyValueStorePort)
 }
+
 func deregisterFromKeyValueStore() {
-	// This function would typically deregister the node from the key-value store
-	// For example, it could send a deregistration request to the key-value store's API
-	// using the provided address and port.
-	// This is a placeholder function, you would implement the actual deregistration logic here.
 	node := globalModel.Node{
 		ID:      *nodeId,
 		Address: *address,
@@ -91,46 +70,41 @@ func deregisterFromKeyValueStore() {
 	}
 	body, err := json.Marshal(node)
 	if err != nil {
-		log.Panicln(fmt.Errorf("unable to deregister node: %w", err))
+		log.Printf("[WARN] Unable to serialize node info for deregistration: %v", err)
+		return
 	}
 	url := fmt.Sprintf("http://%s:%d/node/deregister", *keyValueStoreAddress, *keyValueStorePort)
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(body))
 	if err != nil {
-		log.Panicln(fmt.Errorf("unable to deregister node: %w", err))
+		log.Printf("[WARN] Unable to construct deregister request: %v", err)
+		return
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Panicln(fmt.Errorf("unable to deregister node: %w", err))
+		log.Printf("[WARN] Unable to deregister from key-value-store: %v", err)
+		return
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusNotFound {
-		log.Panicln(fmt.Errorf("unable to deregister node: %w", err))
-	} else if resp.StatusCode != http.StatusOK {
-		log.Panicln(fmt.Errorf("unable to deregister node: %w", err))
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("[WARN] Node deregistration failed: HTTP %d", resp.StatusCode)
 	}
+	log.Printf("[INFO] Node %s deregistered from key-value-store", node.ID)
 }
 
 func main() {
-	// Start the key-value node server
-	// This is where you would typically initialize your server and start listening for requests
-	// For example:
-	// server := NewServer(*address, *port)
-	// if err := server.Start(); err != nil {
-	//     log.Fatalf("Failed to start server: %v", err)
-	// }
 	defer deregisterFromKeyValueStore()
-	gin.SetMode(gin.DebugMode)
+	gin.SetMode(gin.ReleaseMode) // Use ReleaseMode for production, DebugMode for verbose logs
 
-	log.Printf("Key-Value Node started with ID: %s, Address: %s, Port: %d", *nodeId, *address, *port)
-	// Here you would typically block the main goroutine to keep the server running
+	log.Printf("[INFO] Starting Key-Value Node (ID=%s, Address=%s, Port=%d)", *nodeId, *address, *port)
+
 	ctrl := controller.NewStore()
 	router := gin.Default()
 	ginhandler.InitRouters(router, ctrl)
-	if err := router.Run(fmt.Sprintf("%s:%d", *address, *port)); err != nil {
-		log.Fatalf("Failed to start Gin server: %v", err)
+
+	serverAddr := fmt.Sprintf("%s:%d", *address, *port)
+	log.Printf("[INFO] Listening for requests at %s", serverAddr)
+	if err := router.Run(serverAddr); err != nil {
+		log.Fatalf("[FATAL] Failed to start Gin server: %v", err)
 	}
-	// The server will now listen for incoming requests on the specified address and port
-	// You can add more routes and handlers as needed
-	log.Println("Server is running...")
 }
