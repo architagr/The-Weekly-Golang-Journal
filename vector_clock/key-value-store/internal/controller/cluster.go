@@ -134,13 +134,14 @@ func (c *Cluster) resolveConflicts(nodes []INode, k string, values []*model.Valu
 	latest := values[0]
 	for i := 1; i < len(values); i++ {
 		comp := latest.Clock.Compare(values[i].Clock)
-		if comp == -1 {
+		switch comp {
+		case -1:
 			// values[0] is older; values[i] wins (LWW)
 			log.Printf("[REPAIR] Key=%s Detected older value, updating primary", k)
 			latest.Value = values[i].Value
 			latest.Clock = latest.Clock.Merge(values[i].Clock)
 			c.setValueOnNode(nodes[0], k, latest)
-		} else if comp == 1 {
+		case 1:
 			// values[i] is older; repair that replica
 			log.Printf("[REPAIR] Key=%s Repair back-propagate newer value to stale replica", k)
 			values[i].Value = latest.Value
