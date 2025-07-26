@@ -39,7 +39,7 @@ func main() {
 	spreadMethod := spread.GetSpreadStrategy(config.SpreadMethod)
 
 	go controller.StartHTTPServer()
-	log.Printf("Gossip protocol serverID %v started on port: %d\n", config.SelfID, config.Port)
+	log.Printf("Gossip protocol serverID %v started on port: %s\n", config.SelfID, config.Port)
 
 	for _, peer := range config.Peers {
 		go func(url string) {
