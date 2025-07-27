@@ -15,7 +15,8 @@ var (
 )
 
 func init() {
-	SelfID, _ = uuid.NewV7() // Default to nil UUID, should be set later
+	// Generate unique node ID
+	SelfID, _ = uuid.NewV7()
 	Strategy = "anti-entropy"
 	SpreadMethod = "push"
 	Peers = []string{}

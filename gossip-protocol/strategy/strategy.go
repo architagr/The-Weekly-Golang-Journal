@@ -3,6 +3,7 @@ package strategy
 import (
 	"gossip-protocol/config"
 	"gossip-protocol/model"
+	"log"
 	"math/rand"
 	"time"
 )
@@ -15,6 +16,7 @@ type GossipStrategy interface {
 type AntiEntropyStrategy struct{}
 
 func (a *AntiEntropyStrategy) GenerateMessage(state map[string]bool) model.GossipMessage {
+	log.Printf("[STRATEGY] Anti-Entropy generating full state gossip: %v", state)
 	return model.GossipMessage{
 		SenderID:   config.SelfID,
 		Timestamp:  time.Now(),
@@ -22,7 +24,7 @@ func (a *AntiEntropyStrategy) GenerateMessage(state map[string]bool) model.Gossi
 		Config:     *config.CurrentConfig,
 	}
 }
-func (a *AntiEntropyStrategy) Merge(local map[string]bool, incoming model.GossipMessage) map[string]bool {
+func (a *AntiEntropyStrategy) Merge(_ map[string]bool, incoming model.GossipMessage) map[string]bool {
 	return incoming.NodeHealth
 }
 
@@ -35,6 +37,7 @@ func (r *RumorMongeringStrategy) GenerateMessage(state map[string]bool) model.Go
 			partial[k] = v
 		}
 	}
+	log.Printf("[STRATEGY] Rumor-Mongering generating partial gossip: %v", partial)
 	return model.GossipMessage{
 		SenderID:   config.SelfID,
 		Timestamp:  time.Now(),
@@ -53,6 +56,7 @@ type AggregationStrategy struct{}
 
 func (a *AggregationStrategy) GenerateMessage(state map[string]bool) model.GossipMessage {
 	summary := map[string]bool{"healthy": len(state) > 0}
+	log.Printf("[STRATEGY] Aggregation generating summary gossip: %v", summary)
 	return model.GossipMessage{
 		SenderID:   config.SelfID,
 		Timestamp:  time.Now(),

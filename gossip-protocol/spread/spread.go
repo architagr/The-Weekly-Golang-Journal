@@ -19,9 +19,16 @@ func (p *PushSpreadStrategy) Spread(msg model.GossipMessage, peers []string) {
 	for _, peer := range peers {
 		go func(url string) {
 			payload, _ := json.Marshal(msg)
-			log.Printf("Spreading gossip message to peers: %s, message %s", url, payload)
-			http.Post(url, "application/json", bytes.NewBuffer(payload))
-		}(peer + "/gossip")
+			log.Printf("[SEND] Sending gossip → %s | Payload: %s", url, string(payload))
+
+			resp, err := http.Post(url+"/gossip", "application/json", bytes.NewBuffer(payload))
+			if err != nil {
+				log.Printf("[ERROR] Failed to send gossip to %s: %v", url, err)
+				return
+			}
+			defer resp.Body.Close()
+			log.Printf("[ACK] Gossip sent successfully to %s", url)
+		}(peer)
 	}
 }
 
@@ -30,13 +37,14 @@ type PullSpreadStrategy struct{}
 func (p *PullSpreadStrategy) Spread(_ model.GossipMessage, peers []string) {
 	for _, peer := range peers {
 		go func(url string) {
-			res, err := http.Get(url)
+			resp, err := http.Get(url + "/health")
 			if err != nil {
-				log.Println("Failed to pull from", url)
+				log.Printf("[ERROR] Failed to pull gossip from %s: %v", url, err)
 				return
 			}
-			defer res.Body.Close()
-			io.ReadAll(res.Body)
+			defer resp.Body.Close()
+			body, _ := io.ReadAll(resp.Body)
+			log.Printf("[PULL] Pulled gossip from %s → %s", url, string(body))
 		}(peer)
 	}
 }
